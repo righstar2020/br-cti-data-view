@@ -51,6 +51,11 @@ export default {
       if(attackTypeRankData!=undefined)
           this.updateOptionData(attackTypeRankData)
     });
+
+    // 每5秒增加一次数据
+    setInterval(() => {
+      this.incrementAttackData();
+    }, 5000);
   },
   methods: {
     updateOptionData(attackTypeRankData){
@@ -65,6 +70,20 @@ export default {
         })),
         rowNum: 5
       }
+    },
+    incrementAttackData() {
+      // 深拷贝当前数据
+      const currentData = deepCopy(this.option.data);
+      
+      // 为每个攻击类型增加随机数量
+      const updatedData = {};
+      currentData.forEach(item => {
+        // 随机增加1-50的数量
+        const increment = Math.floor(Math.random() * 50) + 1;
+        updatedData[item.name] = item.value + increment;
+      });
+      
+      this.updateOptionData(updatedData);
     }
   }
 }
