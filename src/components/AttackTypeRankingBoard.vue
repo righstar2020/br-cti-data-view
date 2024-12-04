@@ -9,29 +9,35 @@
 import {deepCopy} from "@/util/index.js";
 export default {
   name: 'AttackTypeRankingBoard',
+  props:{
+    dataInput:{
+      type:Object,
+      default:{}
+    }
+  },
   data () {
     return {
       option: {
         data: [
           {
             name: '流量攻击',
-            value: 892
+            value: 0
           },
           {
-            name: '恶意软件',
-            value: 756
-          },
-          {
-            name: '钓鱼攻击', 
-            value: 634
+            name: '蜜罐攻击',
+            value: 0
           },
           {
             name: 'Botnet',
-            value: 521
+            value: 0
           },
           {
             name: '应用层攻击',
-            value: 423
+            value: 0
+          },
+          {
+            name: '其他攻击',
+            value: 0
           }
         ],
         rowNum: 5
@@ -39,25 +45,45 @@ export default {
     }
   },
   watch:{
-    '$store.state.threatIntel.attackTypeRankData'(newVal,oldVal){
+    dataInput(newVal,oldVal){
       if(newVal!=undefined){
-        this.updateOptionData(newVal)
+        let attackTypeRankData = this.processRankingData(newVal)
+        this.updateOptionData(attackTypeRankData)
       }
     }
   },
   created() {
-    this.$nextTick(() => {
-      let attackTypeRankData = this.$store.getters.getThreatIntelData['attackTypeRankData']
-      if(attackTypeRankData!=undefined)
-          this.updateOptionData(attackTypeRankData)
-    });
 
-    // 每5秒增加一次数据
-    setInterval(() => {
-      this.incrementAttackData();
-    }, 5000);
   },
   methods: {
+    processRankingData(dataInput){
+      // 处理数据
+      let attackTypeRankData = {}
+      if(dataInput && dataInput.result) {
+        try {
+          const result = JSON.parse(dataInput.result)
+          if(result.rankings) {
+            // 将攻击类型映射为中文名称
+            const typeMap = {
+              'TRAFFIC': '流量攻击',
+              'HONEYPOT': '蜜罐攻击', 
+              'BOTNET': 'Botnet',
+              'APP_LAYER': '应用层攻击',
+              'OTHER': '其他攻击'
+            }
+            
+            // 转换数据格式
+            result.rankings.forEach(item => {
+              const name = typeMap[item.type] || item.type
+              attackTypeRankData[name] = item.count
+            })
+          }
+        } catch(e) {
+          console.error('处理攻击类型排名数据出错:', e)
+        }
+      }
+      return attackTypeRankData
+    },
     updateOptionData(attackTypeRankData){
       if(!attackTypeRankData || Object.values(attackTypeRankData).length === 0){
         return
@@ -68,7 +94,7 @@ export default {
           name,
           value
         })),
-        rowNum: 5
+        rowNum: Object.values(attackTypeRankData).length
       }
     },
     incrementAttackData() {

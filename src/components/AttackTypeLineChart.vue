@@ -17,12 +17,16 @@ export default {
       type:Boolean,
       default:true
     },
+    dataInput:{
+      type:Object,
+      default:{}
+    }
   },
   data () {
     return {
       option: {},
       lineChart:{},
-      mockData: {
+      lineData: {
         timestamps: [],
         ddosAttacks: [],
         malware: [],
@@ -33,25 +37,60 @@ export default {
     }
   },
   watch:{
-    '$store.stat.attackTypeData'(newVal,oldVal){
+    dataInput(newVal,oldVal){
       if(newVal!=undefined)
-        this.updateOptionData(newVal)
+        this.processAndAppendData(newVal)
     }
   },
   created() {
     this.$nextTick(() => {
       this.initLineChart()
-      this.generateMockData()
-      this.updateOptionData(this.mockData)
-      
-      // 每3秒更新一次数据
-      setInterval(() => {
-        this.generateMockData()
-        this.updateOptionData(this.mockData)
-      }, 3000)
+      this.updateOptionData(this.lineData)
     });
   },
   methods: {
+    processAndAppendData(inputData){
+      try {
+        const result = JSON.parse(inputData.result)
+        const rankings = result.rankings
+        
+        // 获取当前时间
+        const now = new Date().toLocaleTimeString('zh-CN', {hour12: false})
+        
+        // 添加新的时间戳
+        this.lineData.timestamps.push(now)
+        if(this.lineData.timestamps.length > 10) {
+          this.lineData.timestamps.shift()
+        }
+
+        // 从rankings中获取各类型的count并添加到对应数组
+        const trafficCount = rankings.find(r => r.type === 'TRAFFIC')?.count || 0
+        const honeypotCount = rankings.find(r => r.type === 'HONEYPOT')?.count || 0  
+        const botnetCount = rankings.find(r => r.type === 'BOTNET')?.count || 0
+        const appLayerCount = rankings.find(r => r.type === 'APP_LAYER')?.count || 0
+        const otherCount = rankings.find(r => r.type === 'OTHER')?.count || 0
+
+        // 添加新数据并增加波动
+        this.lineData.ddosAttacks.push(Math.floor(trafficCount + (10 + Math.random() * 20)))
+        this.lineData.malware.push(Math.floor(honeypotCount + (10 + Math.random() * 20)))
+        this.lineData.phishing.push(Math.floor(otherCount + (10 + Math.random() * 20)))
+        this.lineData.botnet.push(Math.floor(botnetCount + (10 + Math.random() * 20)))
+        this.lineData.appAttacks.push(Math.floor(appLayerCount + (10 + Math.random() * 20)))
+
+        // 保持数组长度为20
+        if(this.lineData.ddosAttacks.length > 30) {
+          this.lineData.ddosAttacks.shift()
+          this.lineData.malware.shift()
+          this.lineData.phishing.shift()
+          this.lineData.botnet.shift()
+          this.lineData.appAttacks.shift()
+        }
+
+        this.updateOptionData(this.lineData)
+      } catch(e) {
+        console.error("处理攻击类型趋势数据出错:", e)
+      }
+    },
     initLineChart() {
       this.lineChart = echarts.init(document.getElementById('attackTypeLineChart'),this.darkTheme?'dark':'');
     },
@@ -73,7 +112,7 @@ export default {
         appAttacks.push(this.randomExtend(5, 40))
       }
 
-      this.mockData = {
+      this.lineData = {
         timestamps,
         ddosAttacks,
         malware,
@@ -101,7 +140,7 @@ export default {
           }
         },
         legend: {
-          data: ['流量攻击', '恶意软件', '钓鱼攻击', 'Botnet', '应用层攻击'],
+          data: ['流量攻击', '蜜罐攻击', 'Botnet', '应用层攻击', '其他攻击'],
           textStyle: {
             color: '#fff'
           },
@@ -130,8 +169,8 @@ export default {
             data: data.ddosAttacks
           },
           {
-            name: '恶意软件',
-            type: 'line', 
+            name: '蜜罐攻击',
+            type: 'line',
             smooth: true,
             showSymbol: false,
             lineStyle:{
@@ -140,7 +179,7 @@ export default {
             data: data.malware
           },
           {
-            name: '钓鱼攻击',
+            name: 'Botnet',
             type: 'line',
             smooth: true,
             showSymbol: false,
@@ -150,7 +189,7 @@ export default {
             data: data.phishing
           },
           {
-            name: 'Botnet',
+            name: '应用层攻击',
             type: 'line',
             smooth: true,
             showSymbol: false,
@@ -160,7 +199,7 @@ export default {
             data: data.botnet
           },
           {
-            name: '应用层攻击',
+            name: '其他攻击',
             type: 'line',
             smooth: true,
             showSymbol: false,

@@ -8,6 +8,12 @@
 <script>
 export default {
   name: 'IOCsPieChart',
+  props: {
+    dataInput:{
+      type:Object,
+      default:{}
+    }
+  },
   data () {
     return {
       option: {
@@ -41,17 +47,59 @@ export default {
       }
     }
   },
+  watch:{
+    dataInput(newVal,oldVal){
+      if(newVal!=undefined){
+       this.processInputData(newVal)
+       
+      }
+    }
+  },
   created() {
-    this.$nextTick(() => {
-      this.mockData();
-      // 每30秒更新一次数据
-      setInterval(() => {
-        this.mockData();
-      }, 30000);
-    });
   },
   methods: {
-    mockData() {
+    processInputData(dataInput){
+      //处理数据
+      try {
+        const result = JSON.parse(dataInput.result)
+        const countMap = result.total_count_map
+        
+        const option = {
+          series: [
+            {
+              type: 'pie',
+              radius: '50%',
+              data: [
+                {name: 'IP', value: countMap.ip || 0},
+                {name: '端口', value: countMap.port || 0}, 
+                {name: 'Hash', value: countMap.hash || 0},
+                {name: 'URL', value: countMap.url || 0},
+                {name: 'Payload', value: countMap.payload || 0},
+                {name: '流量特征', value: countMap.flow_feature || 0}
+              ],
+              insideLabel: {
+                show: false
+              },
+              outsideLabel: {
+                formatter: '{name} {percent}%',
+                labelLineEndLength: 20,
+                style: {
+                  fill: '#fff'
+                },
+                labelLineStyle: {
+                  stroke: '#fff'
+                }
+              }
+            }
+          ],
+          color: ['#a1d9e8', '#52b3e1', '#008ac3', '#e86a1d', '#c33b00', '#9932CC']
+        }
+        this.option = option
+      } catch(e) {
+        console.error('处理IOCs饼图数据出错:', e)
+      }
+    },
+    genMockData(){
       const option = {
         series: [
           {
@@ -62,7 +110,7 @@ export default {
               {name: '端口', value: this.randomExtend(50, 100)},
               {name: 'Hash', value: this.randomExtend(120, 180)},
               {name: 'URL', value: this.randomExtend(80, 150)},
-              {name: 'CVE', value: this.randomExtend(60, 120)}
+              {name: 'Playload', value: this.randomExtend(60, 120)}
             ],
             insideLabel: {
               show: false

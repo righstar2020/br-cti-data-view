@@ -19,31 +19,75 @@
 import {deepCopy} from "@/util/index.js";
 export default {
   name: 'BlockchainStatusCards',
+  props:{
+    dataInput:{
+      type:Object,
+      default:{}
+    }
+  },
   data () {
     return {
       cards: [],
-      mockData: {
+      chartData: {
         ipfsSize: 128, // GB
         intelCount: 5678 // 情报数量
       }
     }
   },
+  watch:{
+    dataInput(newVal,oldVal){
+      if(newVal!=undefined){
+        console.log('blockchainStatusData newVal',newVal)
+        let data = this.processInputData(newVal)
+        //更新图表
+        this.updateChartData(data)
+      }
+    }
+  },
   created(){
-    this.$nextTick(() => {
-      this.updateChartData()
-      // 每5秒更新一次模拟数据
-      setInterval(() => {
-        this.mockData.ipfsSize += this.randomExtend(1, 5)
-        this.mockData.intelCount += this.randomExtend(10, 50)
-        this.updateChartData()
-      }, 5000)
-    });
   },
   methods: {
-    updateChartData () {
+    processInputData(dataInput){
+      //处理数据
+      //处理数据
+      let blockchainStatusData = {}
+      if(dataInput!=undefined){
+        try{
+          //处理数据
+          let jsonData = JSON.parse(dataInput.result)
+          //将IPFS文件大小从bytes转为GB
+          let ipfsData = this.getFileSizeUnit(jsonData.total_cti_data_size || 0)
+          console.log('ipfsData',ipfsData)
+          //获取情报总数
+          let intelCount = jsonData.total_cti_data_num || 0
+          
+          blockchainStatusData = {
+            ipfsSize: ipfsData,
+            intelCount: {
+              value:intelCount,
+              unit:'条'
+            }
+          }
+        } catch(e) {
+          console.error("处理区块链状态数据出错:", e)
+          blockchainStatusData = {
+            "ipfsSize": {
+              "value":0,
+              "unit":'GB'
+            },
+            "intelCount": {
+              "value":0,
+              "unit":'条'
+            }  
+          }
+        }
+      }
+      return blockchainStatusData
+    },
+    updateChartData (blockchainStatusData) {
       const charts_label_list = ['IPFS文件', '链上情报']
-      const charts_unit_list = ['GB', '条']
-      const values = [this.mockData.ipfsSize, this.mockData.intelCount]
+      const charts_unit_list = [blockchainStatusData.ipfsSize.unit, blockchainStatusData.intelCount.unit]
+      const values = [blockchainStatusData.ipfsSize.value, blockchainStatusData.intelCount.value]
       
       this.cards = new Array(2).fill(0).map((foo, i) => ({
         title: charts_label_list[i],
@@ -85,6 +129,29 @@ export default {
           color: ['#03d3ec']
         }
       }))
+    },
+    getFileSizeUnit(size){
+      //输入大小为bytes
+      //获取文件大小单位和格式化的数字
+      let unit = 'B'
+      let formattedSize = size
+      if(size >= 1024*1024*1024*1024){
+        unit = 'TB'
+        formattedSize = (size/(1024*1024*1024*1024)).toFixed(2)
+      }else if(size >= 1024*1024*1024){
+        unit = 'GB'
+        formattedSize = (size/(1024*1024*1024)).toFixed(2)
+      }else if(size >= 1024*1024){
+        unit = 'MB'
+        formattedSize = (size/(1024*1024)).toFixed(2)
+      }else if(size >= 1024){
+        unit = 'KB'
+        formattedSize = (size/1024).toFixed(2)
+      }
+      return {
+        value: parseFloat(formattedSize),
+        unit:unit
+      }
     },
     randomExtend (minNum, maxNum) {
       if (arguments.length === 1) {

@@ -3,32 +3,32 @@
     <dv-full-screen-container>
       <div class="header-box" >
         <TitlePlane/>
-        <DigitalPlane/>
+        <DigitalPlane :dataInput="digitalPlaneData"/>
       </div>
       <div class="body-box">
           <div class="body-left-box">
-              <TransactionLineChart/>
+              <UpchainTrendLineChart :dataInput="upchainTrendLineData"/>
           </div>
           <div class="body-center-box">
               <IOCsWorldMap/>
           </div>
           <div class="body-right-box">
-              <OnchainCtiScrollBar/>
+              <OnchainCtiScrollBar :dataInput="onchainCtiScrollBarData"/>
           </div>
       </div>
       <div class="bottom-box">
         <div class="bottom-left-box">
-              <AttackTypeRankingBoard/>
+              <AttackTypeRankingBoard :dataInput="attackTypeRankingData"/>
         </div>
           <div class="bottom-center-box">
-              <AttackTypeLineChart/>
+              <AttackTypeLineChart :dataInput="attackTypeLineChartData"/>
           </div>
           <div class="bottom-right-box">
               <div class="right-box-1">
-                <BlockchainStatusCards/>
+                <BlockchainStatusCards :dataInput="blockchainStatusData"/>
               </div>
               <div class="right-box-2">
-                <IOCsPieChart/>
+                <IOCsPieChart :dataInput="iocsPieChartData"/>
               </div>
           </div>
       </div>
@@ -40,7 +40,7 @@
 <script>
 import TitlePlane from './TitlePlane.vue'
 import DigitalPlane from './DigitalPlane.vue'
-import TransactionLineChart from './TransactionLineChart.vue'
+import UpchainTrendLineChart from './UpchainTrendLineChart.vue'
 import IOCsWorldMap from './IOCsWorldMap.vue'
 import OnchainCtiScrollBar from './OnchainCtiScrollBar.vue'
 import AttackTypeRankingBoard from './AttackTypeRankingBoard.vue'
@@ -53,7 +53,7 @@ export default {
   components: {
     TitlePlane,
     DigitalPlane,
-    TransactionLineChart,
+    UpchainTrendLineChart,
     IOCsWorldMap,
     OnchainCtiScrollBar,
     AttackTypeRankingBoard,
@@ -63,22 +63,119 @@ export default {
   },
   data() {
     return {
-      consoleContent:[]
-    }
-  },
-  watch:{
-    '$store.state.global.message'(newVal,oldVal){
-      
+      blockchainServerHost:'http://localhost:7777',
+      upchainTrendLineData:{},
+      attackTypeRankingData:{},
+      attackTypeLineChartData:{},
+      blockchainStatusData:{},
+      digitalPlaneData:{},
+      iocsPieChartData:{},
+      onchainCtiScrollBarData:{},
+      queryTaskList:[ ]
     }
   },
   mounted() {
   },
   created() {
-    
+    this.initQueryTaskList()
+    this.loopQueryDataViewData()
   },
   methods: {
-    
-    
+    initQueryTaskList(){
+      //初始化查询任务列表
+      var newQueryTaskList=[
+          {
+            taskName:'attackTypeRankingData', 
+            url:this.blockchainServerHost+'/dataStat/getAttackTypeRanking',
+            method:'POST',
+            intervalTime:10000,
+            data:{}
+          },
+          {
+            taskName:'attackTypeLineChartData',
+            url:this.blockchainServerHost+'/dataStat/getAttackTypeRanking',
+            method:'POST',
+            intervalTime:2000,
+            data:{}
+          },
+          {
+            taskName:'blockchainStatusData',
+            url:this.blockchainServerHost+'/dataStat/getDataStatistics',
+            method:'POST', 
+            intervalTime:10000,
+            data:{}
+          },
+          {
+            taskName:'digitalPlaneData',
+            url:this.blockchainServerHost+'/dataStat/getSystemOverview',
+            method:'POST',
+            intervalTime:10000,
+            data:{}
+          },
+          {
+            taskName:'iocsPieChartData',
+            url:this.blockchainServerHost+'/dataStat/getIOCsDistribution',
+            method:'POST',
+            intervalTime:10000,
+            data:{}
+          },
+          {
+            taskName:'onchainCtiScrollBarData',
+            url:this.blockchainServerHost+'/dataStat/queryCTISummaryInfo',
+            method:'POST',
+            intervalTime:10000,
+            data:{
+              "limit":15
+            }
+          },
+          {
+            taskName:'upchainTrendLineData',
+            url:this.blockchainServerHost+'/dataStat/getUpchainTrend',
+            method:'POST',
+            intervalTime:10000, //查询间隔时间，单位为毫秒
+            data:{}
+          }
+          
+      ]
+      this.queryTaskList = newQueryTaskList
+      newQueryTaskList.forEach(task=>{
+        this.queryTaskData(task)
+      })
+    },
+    loopQueryDataViewData(){
+        //循环查询所有面板的数据
+        this.queryTaskList.forEach(task=>{
+          setInterval(()=>{
+            this.queryTaskData(task)
+          },task.intervalTime)
+        })
+    },
+    queryTaskData(task){
+      this.queryDataByUrl(task.url,task.method,task.data).then(res=>{
+          this[task.taskName] = res
+      }).catch(err => {
+        console.error(`查询${task.taskName}数据失败:`, err)
+      })
+    },
+    queryDataByUrl(url,method,data){
+      //查询数据
+      return new Promise((resolve,reject)=>{
+        fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+          resolve(res)
+        })
+        .catch(err => {
+          reject(err)
+        })
+      })
+    }
   }
 }
 </script>

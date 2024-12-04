@@ -24,38 +24,44 @@ import { deepCopy } from '@/util/index.js'
 
 export default {
   name: 'DigitalPlane',
+  props:{
+    dataInput:{
+      type:Object,
+      default:{}
+    }
+  },
   data () {
     return {
-      mockDigitalPlaneData:{
+      digitalPlaneData:{
+            "blockHeight":{
+              'title':'区块高度',
+              'number':0,
+              'fill_color':'#4d99fc',
+              'unit':'块'
+            },
+            "blockTx":{
+              'title':'区块交易', 
+              'number':0,
+              'fill_color':'#f46827',
+              'unit':'笔'
+            },
             "ctiValue":{
               'title':'情报价值',
               'number':0,
-              'fill_color':'#4d99fc',
+              'fill_color':'#40faee',
               'unit':'积分'
             },
             "ctiCount":{
-              'title':'情报数量', 
+              'title':'情报数量',
               'number':0,
-              'fill_color':'#f46827',
+              'fill_color':'#4d99fc',
               'unit':'条'
             },
-            "modelCount":{
-              'title':'模型数量',
-              'number':0, 
-              'fill_color':'#40faee',
-              'unit':'个'
-            },
-            "ctiTrades":{
-              'title':'情报交易量',
+            "ctiTx":{
+              'title':'情报交易',
               'number':0,
-              'fill_color':'#4d99fc',
-              'unit':'txs'
-            },
-            "modelTrades":{
-              'title':'模型交易量',
-              'number':0,
-              'fill_color':'#4d99fc',
-              'unit':'txs'
+              'fill_color':'#f46827',
+              'unit':'笔'
             },
             "iocsCount":{
               'title':'IOCs数量',
@@ -63,56 +69,58 @@ export default {
               'fill_color':'#4d99fc',
               'unit':'个'
             },
-            "userCount":{
-              'title':'用户数量',
+            "accountCount":{
+              'title':'账户数量',
               'number':0,
               'fill_color':'#4d99fc',
-              'unit':'人'
+              'unit':'个'
             }
       },
       digitalFlopData: [] // 添加digitalFlopData数据属性
     }
   },
   watch:{
-    '$store.state.digitalPlaneData'(newVal,oldVal){
+    dataInput(newVal,oldVal){
       if(newVal!=undefined){
-        this.updataData(newVal)
+        console.log('newVal',newVal)
+        let digitalPlaneData = this.processInputData(newVal)
+        this.updataData(digitalPlaneData)
       }
     },
   },
   created(){
-    this.updataData(this.genMockDigitalPlaneData())
-    setInterval(()=>{
-      this.loopMockDigitalPlaneData()
-    },2000)
+    if(this.dataInput!=undefined){
+      this.processInputData(this.dataInput)
+    }
+    this.updataData(this.digitalPlaneData)
+    
   },
   methods: {
+    processInputData(dataInput){
+      let newDigitalPlaneData = this.digitalPlaneData
+      try {
+        if(dataInput && dataInput.result) {
+          newDigitalPlaneData['blockHeight']['number'] = dataInput.result.block_height || 0
+          newDigitalPlaneData['blockTx']['number'] = dataInput.result.total_transactions || 0
+          newDigitalPlaneData['ctiValue']['number'] = dataInput.result.cti_value || 0
+          newDigitalPlaneData['ctiCount']['number'] = dataInput.result.cti_count || 0
+          newDigitalPlaneData['ctiTx']['number'] = dataInput.result.cti_transactions || 0
+          newDigitalPlaneData['iocsCount']['number'] = dataInput.result.iocs_count || 0
+          newDigitalPlaneData['accountCount']['number'] = dataInput.result.account_count || 0
+        } 
+      } catch(e) {
+        console.error("处理数字面板数据出错:", e)
+        
+      }
+      this.digitalPlaneData = newDigitalPlaneData
+      return newDigitalPlaneData
+    },
     loopMockDigitalPlaneData(){
       //随机一些数据
       let newMockDigitalPlaneData = this.genMockDigitalPlaneData()
       //更新数据
       this.updataData(newMockDigitalPlaneData)
   
-    },
-    genMockDigitalPlaneData(){
-      let newMockDigitalPlaneData = this.mockDigitalPlaneData
-      // 情报相关数量较大,增长也较快
-      newMockDigitalPlaneData['ctiValue']['number'] = (newMockDigitalPlaneData['ctiValue']['number'] || 1000) + this.randomExtend(10,30)
-      newMockDigitalPlaneData['ctiCount']['number'] = (newMockDigitalPlaneData['ctiCount']['number'] || 800) + this.randomExtend(8,20) 
-      newMockDigitalPlaneData['ctiTrades']['number'] = (newMockDigitalPlaneData['ctiTrades']['number'] || 500) + this.randomExtend(5,15)
-      
-      // 模型相关数量中等
-      newMockDigitalPlaneData['modelCount']['number'] = (newMockDigitalPlaneData['modelCount']['number'] || 200) + this.randomExtend(2,8)
-      newMockDigitalPlaneData['modelTrades']['number'] = (newMockDigitalPlaneData['modelTrades']['number'] || 100) + this.randomExtend(1,5)
-      
-      // IOCs数量较大但增长较慢
-      newMockDigitalPlaneData['iocsCount']['number'] = (newMockDigitalPlaneData['iocsCount']['number'] || 2000) + this.randomExtend(3,10)
-      
-      // 用户数量较少且增长最慢
-      newMockDigitalPlaneData['userCount']['number'] = (newMockDigitalPlaneData['userCount']['number'] || 50) + this.randomExtend(0,2)
-      
-      this.mockDigitalPlaneData = newMockDigitalPlaneData
-      return newMockDigitalPlaneData
     },
     updataData (digitalPlaneData) {
       let newDigitalFlopData = []

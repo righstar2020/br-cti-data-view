@@ -8,23 +8,17 @@
 import {deepCopy} from "@/util/index.js";
 export default {
   name: 'OnchainCtiScrollBoard',
+  props: {
+    dataInput:{
+      type:Object,
+      default:{}
+    }
+  },
   data () {
     return {
       option: {
         header: ['Tags', '时间', '链上Hash'],
         data: [
-          ['APT41,Malware', '2023-10-01 10:23:45', '0x8f23...4d21'],
-          ['Ransomware,Botnet', '2023-10-01 09:15:32', '0x7a12...9f34'],
-          ['Phishing,Trojan', '2023-10-01 08:45:12', '0x3b45...2e67'],
-          ['APT28,Backdoor', '2023-10-01 07:30:25', '0x9c56...1a89'],
-          ['ZeroDay,Exploit', '2023-10-01 06:20:18', '0x4d78...5b23'],
-          ['DDoS,C2', '2023-10-01 05:10:45', '0x2e34...8c90'],
-          ['APT29,Rootkit', '2023-10-01 04:05:33', '0x1f45...7d12'],
-          ['Cryptojacking,RAT', '2023-10-01 03:15:22', '0x6b89...3e45'],
-          ['Spyware,Worm', '2023-10-01 02:30:15', '0x5d34...9c78'],
-          ['APT33,Keylogger', '2023-10-01 01:45:08', '0x8e12...4f56'],
-          ['Adware,Virus', '2023-10-01 00:55:42', '0x2c67...8b34'],
-          ['Malvertising,PUA', '2023-09-30 23:40:16', '0x7f90...1a23']
         ],
         index: true,
         columnWidth: [50, 200, 200,180],
@@ -34,17 +28,68 @@ export default {
         headerHeight: 45,
         oddRowBGC: 'rgba(0, 44, 81, 0.8)', 
         evenRowBGC: 'rgba(10, 29, 50, 0.8)',
-        waitTime: 2000 // 添加轮播间隔时间,单位为毫秒
+        waitTime: 1500, // 轮播间隔时间,单位为毫秒
+        carousel: 'single' // 开启单行轮播
+      }
+    }
+  },
+  watch:{
+    dataInput(newVal,oldVal){
+      if(newVal!=undefined){
+        console.log('newVal',newVal)
+        this.processInputData(newVal)
       }
     }
   },
   created() {
-    // 每30秒更新一次数据
-    setInterval(() => {
-      this.mockNewData();
-    }, 6000);
   },
   methods: {
+    processInputData(dataInput){
+      //处理数据
+      try {
+        const result = JSON.parse(dataInput.result)
+        
+        const newData = result.map(item => {
+          return [
+            item.tags.join(','),
+            item.create_time,
+            item.cti_hash.slice(0,10) + '...' + item.cti_hash.slice(-4)
+          ]
+        })
+        //过滤新数据
+        const newDataList = this.filterNewData(newData)
+        if(newDataList.length==0) return
+        //更新数据
+        var currentData = this.option.data
+        currentData.unshift(...newDataList) // 将新数据添加到头部
+        currentData = currentData.slice(0,15) // 保持最多15条数据
+        this.option = {
+          ...this.option,
+          data: currentData
+        }
+      } catch(e) {
+        console.error('处理滚动数据出错:', e)
+      }
+    },
+    filterNewData(dataList){
+      var oldData = this.option.data
+      var newDataList = []
+      // 检查新数据是否已存在
+      let hasNew = false
+      for(let i = 0; i < dataList.length; i++){
+        let found = false
+        for(let j = 0; j < oldData.length; j++){
+          if(dataList[i][2] === oldData[j][2]){ // 比较hash值
+            found = true
+            break
+          }
+        }
+        if(!found){
+          newDataList.push(dataList[i])
+        }
+      }
+      return newDataList
+    },
     mockNewData() {
       const tags = [
         'APT41,Malware',
@@ -72,7 +117,7 @@ export default {
       
       let currentData = this.option.data;
       currentData.unshift(newData);
-      currentData = currentData.slice(0, 6);
+      currentData = currentData.slice(0, 15);
       
       this.option = {
         ...this.option,
