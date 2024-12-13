@@ -5,6 +5,7 @@ module.exports = defineConfig({
   devServer: {
     client: {
       overlay: true
-    }
+    },
+    port: 8081
   }
 })
